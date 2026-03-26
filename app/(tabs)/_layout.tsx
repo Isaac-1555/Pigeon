@@ -1,33 +1,45 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Tabs } from "expo-router";
+import { Home, Settings } from "lucide-react-native";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+        tabBarActiveTintColor: "hsl(221.2, 83.2%, 53.3%)",
+        tabBarInactiveTintColor: "hsl(215.4, 16.3%, 46.9%)",
+        tabBarStyle: {
+          backgroundColor: "white",
+          borderTopColor: "hsl(214.3, 31.8%, 91.4%)",
+          borderTopWidth: 1,
+          paddingBottom: 8,
+          paddingTop: 8,
+          height: 60,
+        },
+        headerStyle: {
+          backgroundColor: "white",
+        },
+        headerTitleStyle: {
+          fontWeight: "600",
+          color: "hsl(222.2, 84%, 4.9%)",
+        },
+        headerShadowVisible: false,
+        headerTitleAlign: "left",
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Dashboard",
+          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="settings"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Settings",
+          tabBarIcon: ({ color, size }) => (
+            <Settings size={size} color={color} />
+          ),
         }}
       />
     </Tabs>

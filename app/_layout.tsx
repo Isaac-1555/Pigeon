@@ -1,24 +1,36 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import "../global.css";
+import { Slot, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import { AppProvider, useApp } from "@/context/app-context";
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+function RootLayoutNav() {
+  const { isLoggedIn } = useApp();
+  const segments = useSegments();
+  const router = useRouter();
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+  useEffect(() => {
+    const inAuthGroup = segments[0] === "(tabs)";
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+    if (!isLoggedIn && inAuthGroup) {
+      router.replace("/login");
+    } else if (isLoggedIn && !inAuthGroup) {
+      router.replace("/(tabs)");
+    }
+  }, [isLoggedIn, segments, router]);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <>
+      <Slot />
+      <StatusBar style="dark" />
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AppProvider>
+      <RootLayoutNav />
+    </AppProvider>
   );
 }

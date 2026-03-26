@@ -1,98 +1,225 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  Modal,
+  SafeAreaView,
+} from "react-native";
+import { useApp } from "@/context/app-context";
+import { sendStepUpdate } from "@/lib/email";
+import { Mail, UserPlus, ChevronDown, X, User } from "lucide-react-native";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function DashboardScreen() {
+  const { customers, steps, logout, setCustomerStep } = useApp();
+  const [sendingTo, setSendingTo] = useState<string | null>(null);
+  const [pickerCustomerId, setPickerCustomerId] = useState<string | null>(null);
 
-export default function HomeScreen() {
+  const handleSendUpdate = async (
+    customerId: string,
+    customerName: string,
+    customerEmail: string,
+    stepId: string,
+    stepLabel: string
+  ) => {
+    setSendingTo(customerId);
+    const result = await sendStepUpdate({
+      customerName,
+      customerEmail,
+      stepName: stepLabel,
+    });
+    setSendingTo(null);
+    setPickerCustomerId(null);
+    setCustomerStep(customerId, stepId);
+
+    Alert.alert(result.success ? "Success" : "Error", result.message);
+  };
+
+  const handleAddCustomer = () => {
+    Alert.alert("Coming Soon", "Adding customers will be available in a future update.");
+  };
+
+  const currentPickerCustomer = customers.find((c) => c.id === pickerCustomerId);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <SafeAreaView className="flex-1 bg-white">
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-6 pt-2 pb-4 border-b border-border">
+        <View>
+          <Text className="text-2xl font-bold text-foreground">Customers</Text>
+          <Text className="text-sm text-muted-foreground mt-1">
+            {customers.length} {customers.length === 1 ? "customer" : "customers"}
+          </Text>
+        </View>
+        <View className="flex-row gap-3">
+          <TouchableOpacity
+            className="bg-primary rounded-lg px-4 py-2.5 flex-row items-center gap-2"
+            onPress={handleAddCustomer}
+            activeOpacity={0.8}
+          >
+            <UserPlus size={16} color="white" />
+            <Text className="text-primary-foreground font-medium text-sm">Add</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="border border-border rounded-lg px-4 py-2.5"
+            onPress={logout}
+            activeOpacity={0.8}
+          >
+            <Text className="text-muted-foreground font-medium text-sm">Logout</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      {/* Customer List */}
+      <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
+        {customers.map((customer) => (
+          <View
+            key={customer.id}
+            className="border border-border rounded-xl p-5 mb-4 bg-white"
+          >
+            {/* Customer Info */}
+            <View className="flex-row items-center gap-3 mb-4">
+              <View className="w-11 h-11 bg-secondary rounded-full items-center justify-center">
+                <User size={20} color="hsl(222.2, 47.4%, 11.2%)" />
+              </View>
+              <View className="flex-1">
+                <View className="flex-row items-center gap-2 flex-wrap">
+                  <Text className="text-base font-semibold text-foreground">
+                    {customer.name}
+                  </Text>
+                  {customer.currentStepId && (() => {
+                    const step = steps.find((s) => s.id === customer.currentStepId);
+                    return step ? (
+                      <View className="bg-primary/10 rounded-full px-2.5 py-0.5">
+                        <Text className="text-xs font-medium text-primary">{step.label}</Text>
+                      </View>
+                    ) : null;
+                  })()}
+                </View>
+                <Text className="text-sm text-muted-foreground">{customer.email}</Text>
+              </View>
+            </View>
+
+            {/* Step Selector */}
+            <Text className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+              Send Status Update
+            </Text>
+            <TouchableOpacity
+              className="flex-row items-center justify-between border border-border rounded-lg px-4 py-3 bg-secondary/50"
+              onPress={() => setPickerCustomerId(customer.id)}
+              activeOpacity={0.7}
+              disabled={sendingTo === customer.id}
+            >
+              {sendingTo === customer.id ? (
+                <View className="flex-row items-center gap-2">
+                  <ActivityIndicator size="small" color="hsl(221.2, 83.2%, 53.3%)" />
+                  <Text className="text-sm text-muted-foreground">Sending...</Text>
+                </View>
+              ) : customer.currentStepId ? (
+                <>
+                  <View className="flex-row items-center gap-2">
+                    <Mail size={16} color="hsl(221.2, 83.2%, 53.3%)" />
+                    <Text className="text-sm text-primary font-medium">
+                      {steps.find((s) => s.id === customer.currentStepId)?.label}
+                    </Text>
+                  </View>
+                  <Text className="text-xs text-muted-foreground">Change step</Text>
+                </>
+              ) : (
+                <>
+                  <View className="flex-row items-center gap-2">
+                    <Mail size={16} color="hsl(215.4, 16.3%, 46.9%)" />
+                    <Text className="text-sm text-foreground">Choose a step to notify</Text>
+                  </View>
+                  <ChevronDown size={16} color="hsl(215.4, 16.3%, 46.9%)" />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        ))}
+
+        {customers.length === 0 && (
+          <View className="items-center justify-center py-20">
+            <User size={48} color="hsl(214.3, 31.8%, 91.4%)" />
+            <Text className="text-lg text-muted-foreground mt-4">No customers yet</Text>
+            <Text className="text-sm text-muted-foreground mt-1">
+              Tap &quot;Add&quot; to add your first customer
+            </Text>
+          </View>
+        )}
+
+        {/* Bottom padding */}
+        <View className="h-8" />
+      </ScrollView>
+
+      {/* Step Picker Modal */}
+      <Modal
+        visible={pickerCustomerId !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setPickerCustomerId(null)}
+      >
+        <View className="flex-1 justify-end bg-black/40">
+          <View className="bg-white rounded-t-3xl px-6 pt-6 pb-10 max-h-[70%]">
+            {/* Modal Header */}
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-lg font-bold text-foreground">Select Step</Text>
+              <TouchableOpacity
+                onPress={() => setPickerCustomerId(null)}
+                className="w-8 h-8 items-center justify-center rounded-full bg-secondary"
+              >
+                <X size={16} color="hsl(222.2, 47.4%, 11.2%)" />
+              </TouchableOpacity>
+            </View>
+            {currentPickerCustomer && (
+              <Text className="text-sm text-muted-foreground mb-5">
+                Sending update to {currentPickerCustomer.name} ({currentPickerCustomer.email})
+              </Text>
+            )}
+
+            {/* Step List */}
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {steps.map((step, index) => (
+                <TouchableOpacity
+                  key={step.id}
+                  className="flex-row items-center gap-4 py-4 border-b border-border"
+                  onPress={() => {
+                    if (currentPickerCustomer) {
+                      handleSendUpdate(
+                        currentPickerCustomer.id,
+                        currentPickerCustomer.name,
+                        currentPickerCustomer.email,
+                        step.id,
+                        step.label
+                      );
+                    }
+                  }}
+                  activeOpacity={0.6}
+                >
+                  <View className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center">
+                    <Text className="text-sm font-bold text-primary">{index + 1}</Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-base font-medium text-foreground">{step.label}</Text>
+                  </View>
+                  <Mail size={18} color="hsl(221.2, 83.2%, 53.3%)" />
+                </TouchableOpacity>
+              ))}
+
+              {steps.length === 0 && (
+                <View className="items-center py-10">
+                  <Text className="text-muted-foreground">
+                    No steps configured. Add steps in Settings.
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
