@@ -14,7 +14,7 @@ import { sendStepUpdate } from "@/lib/email";
 import { Mail, UserPlus, ChevronDown, X, User } from "lucide-react-native";
 
 export default function DashboardScreen() {
-  const { customers, steps, logout, setCustomerStep } = useApp();
+  const { customers, steps, logout, setCustomerStep, getEmailTemplate, businessName } = useApp();
   const [sendingTo, setSendingTo] = useState<string | null>(null);
   const [pickerCustomerId, setPickerCustomerId] = useState<string | null>(null);
 
@@ -25,11 +25,18 @@ export default function DashboardScreen() {
     stepId: string,
     stepLabel: string
   ) => {
+    const template = getEmailTemplate(stepId);
+    const subject = template?.subject ?? `Update: ${stepLabel}`;
+    const body = template?.body ?? `Hi {{customer_name}},\n\nYour order status has been updated to: {{step_name}}.\n\nBest regards,\n{{business_name}}`;
+
     setSendingTo(customerId);
     const result = await sendStepUpdate({
       customerName,
       customerEmail,
       stepName: stepLabel,
+      subject,
+      body,
+      businessName,
     });
     setSendingTo(null);
     setPickerCustomerId(null);

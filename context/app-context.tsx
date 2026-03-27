@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import {
+  saveEmailTemplates,
+  loadEmailTemplates,
+  saveBusinessName,
+  loadBusinessName,
+  StoredEmailTemplate,
+} from "@/lib/storage";
 
 export interface Customer {
   id: string;
@@ -13,10 +20,18 @@ export interface ProcessStep {
   order: number;
 }
 
+export interface EmailTemplate {
+  stepId: string;
+  subject: string;
+  body: string;
+}
+
 interface AppState {
   isLoggedIn: boolean;
   customers: Customer[];
   steps: ProcessStep[];
+  emailTemplates: EmailTemplate[];
+  businessName: string;
   login: () => void;
   logout: () => void;
   addStep: (label: string) => void;
@@ -24,6 +39,9 @@ interface AppState {
   moveStepUp: (id: string) => void;
   moveStepDown: (id: string) => void;
   setCustomerStep: (customerId: string, stepId: string | null) => void;
+  updateEmailTemplate: (stepId: string, subject: string, body: string) => void;
+  getEmailTemplate: (stepId: string) => EmailTemplate | undefined;
+  setBusinessName: (name: string) => void;
 }
 
 const DEFAULT_STEPS: ProcessStep[] = [
@@ -32,6 +50,67 @@ const DEFAULT_STEPS: ProcessStep[] = [
   { id: "3", label: "Shipped", order: 2 },
   { id: "4", label: "Delivered", order: 3 },
 ];
+
+const DEFAULT_BUSINESS_NAME = "Pigeon";
+
+function buildDefaultTemplates(businessName: string): EmailTemplate[] {
+  return [
+    {
+      stepId: "1",
+      subject: "Order Received - Thank you, {{customer_name}}!",
+      body: `Hi {{customer_name}},
+
+Thank you for your order! We've received it and it's now in our queue.
+
+We'll begin working on it shortly and keep you updated on the progress.
+
+Estimated processing time: 3-5 business days.
+
+If you have any questions in the meantime, feel free to reach out.
+
+Best regards,
+{{business_name}}`,
+    },
+    {
+      stepId: "2",
+      subject: "Your order is now in progress",
+      body: `Hi {{customer_name}},
+
+Great news! Your order is now {{step_name}}. Our team is giving it their full attention.
+
+We'll notify you as soon as it moves to the next stage.
+
+Best regards,
+{{business_name}}`,
+    },
+    {
+      stepId: "3",
+      subject: "Your order has been shipped!",
+      body: `Hi {{customer_name}},
+
+Your order has been shipped and is on its way to you!
+
+Please allow a few days for delivery. We'll let you know once it arrives.
+
+Best regards,
+{{business_name}}`,
+    },
+    {
+      stepId: "4",
+      subject: "Your order has been delivered!",
+      body: `Hi {{customer_name}},
+
+Your order has been successfully delivered! We hope everything meets your expectations.
+
+If you have any questions or concerns about your order, please don't hesitate to contact us.
+
+Thank you for choosing {{business_name}}!
+
+Best regards,
+{{business_name}}`,
+    },
+  ];
+}
 
 const DEFAULT_CUSTOMERS: Customer[] = [
   { id: "1", name: "Karthi", email: "benisaac1324@gmail.com", currentStepId: null },
@@ -43,6 +122,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>(DEFAULT_CUSTOMERS);
   const [steps, setSteps] = useState<ProcessStep[]>(DEFAULT_STEPS);
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>(
+    buildDefaultTemplates(DEFAULT_BUSINESS_NAME)
+  );
+  const [businessName, setBusinessNameState] = useState(DEFAULT_BUSINESS_NAME);
+
+  // Load persisted data on mount
+  useEffect(() => {
+    (async () => {
+      const [savedTemplates, savedName] = await Promise.all([
+        loadEmailTemplates(),
+        loadBusinessName(),
+      ]);
+      if (savedName) {
+        setBusinessNameState(savedName);
+      }
+      if (savedTemplates) {
+        setEmailTemplates(savedTemplates);
+      } else if (savedName) {
+        // First load with a business name but no saved templates:
+        // regenerate defaults with the saved business name
+        setEmailTemplates(buildDefaultTemplates(savedName));
+      }
+    })();
+  }, []);
 
   const login = useCallback(() => setIsLoggedIn(true), []);
   const logout = useCallback(() => setIsLoggedIn(false), []);
@@ -64,6 +167,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .filter((s) => s.id !== id)
         .map((s, i) => ({ ...s, order: i }))
     );
+    // Also remove the associated email template
+    setEmailTemplates((prev) => {
+      const updated = prev.filter((t) => t.stepId !== id);
+      saveEmailTemplates(updated);
+      return updated;
+    });
   }, []);
 
   const moveStepUp = useCallback((id: string) => {
@@ -92,12 +201,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  const updateEmailTemplate = useCallback(
+    (stepId: string, subject: string, body: string) => {
+      setEmailTemplates((prev) => {
+        const exists = prev.some((t) => t.stepId === stepId);
+        const updated = exists
+          ? prev.map((t) => (t.stepId === stepId ? { ...t, subject, body } : t))
+          : [...prev, { stepId, subject, body }];
+        saveEmailTemplates(updated);
+        return updated;
+      });
+    },
+    []
+  );
+
+  const getEmailTemplate = useCallback(
+    (stepId: string): EmailTemplate | undefined => {
+      return emailTemplates.find((t) => t.stepId === stepId);
+    },
+    [emailTemplates]
+  );
+
+  const handleSetBusinessName = useCallback((name: string) => {
+    setBusinessNameState(name);
+    saveBusinessName(name);
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
         isLoggedIn,
         customers,
         steps,
+        emailTemplates,
+        businessName,
         login,
         logout,
         addStep,
@@ -105,6 +242,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         moveStepUp,
         moveStepDown,
         setCustomerStep,
+        updateEmailTemplate,
+        getEmailTemplate,
+        setBusinessName: handleSetBusinessName,
       }}
     >
       {children}
