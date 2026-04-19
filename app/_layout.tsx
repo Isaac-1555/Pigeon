@@ -1,23 +1,36 @@
 import "../global.css";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
-import { AppProvider, useApp } from "@/context/app-context";
+import { useEffect, useState } from "react";
+import { ConvexProvider, useAuthToken } from "@/lib/convex";
 
 function RootLayoutNav() {
-  const { isLoggedIn } = useApp();
+  const token = useAuthToken();
   const segments = useSegments();
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const inAuthGroup = segments[0] === "(tabs)";
+    setIsLoading(false);
+  }, []);
 
-    if (!isLoggedIn && inAuthGroup) {
+  useEffect(() => {
+    if (isLoading) return;
+
+    const inTabs = segments[0] === "(tabs)";
+    const inOnboarding = segments[0] === "onboarding";
+    const inLogin = segments[0] === "login";
+
+    if (!token && inTabs) {
       router.replace("/login");
-    } else if (isLoggedIn && !inAuthGroup) {
-      router.replace("/(tabs)");
+    } else if (token && !inTabs && !inOnboarding && !inLogin) {
+      router.replace("/onboarding");
     }
-  }, [isLoggedIn, segments, router]);
+  }, [token, isLoading, segments, router]);
+
+  if (isLoading) {
+    return null;
+  }
 
   return (
     <>
@@ -29,8 +42,8 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <AppProvider>
+    <ConvexProvider>
       <RootLayoutNav />
-    </AppProvider>
+    </ConvexProvider>
   );
 }

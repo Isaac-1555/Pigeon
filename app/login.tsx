@@ -7,20 +7,58 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from "react-native";
-import { useApp } from "@/context/app-context";
+import { useAuthActions } from "@/lib/convex";
+import { useRouter } from "expo-router";
 
-export default function LoginScreen() {
-  const { login } = useApp();
+function LoginForm() {
+  const router = useRouter();
+  const { signIn } = useAuthActions();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert("Error", "Please enter both email and password");
       return;
     }
-    login();
+
+    setIsLoading(true);
+    try {
+      await signIn("password", {
+        flow: "signIn",
+        email: email.trim(),
+        password: password.trim(),
+      });
+      router.replace("/(tabs)");
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Sign in failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignUp = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Error", "Please enter both email and password");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await signIn("password", {
+        flow: "signUp",
+        email: email.trim(),
+        password: password.trim(),
+      });
+      router.replace("/onboarding");
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Sign up failed");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -29,7 +67,6 @@ export default function LoginScreen() {
       className="flex-1 bg-white"
     >
       <View className="flex-1 justify-center px-8">
-        {/* Logo / Branding */}
         <View className="items-center mb-12">
           <View className="w-20 h-20 bg-primary rounded-2xl items-center justify-center mb-4">
             <Text className="text-white text-3xl font-bold">P</Text>
@@ -40,7 +77,6 @@ export default function LoginScreen() {
           </Text>
         </View>
 
-        {/* Form */}
         <View className="gap-4">
           <View>
             <Text className="text-sm font-medium text-foreground mb-2">
@@ -75,19 +111,35 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             className="bg-primary rounded-lg py-4 items-center mt-4"
-            onPress={handleLogin}
+            onPress={handleSignIn}
+            disabled={isLoading}
             activeOpacity={0.8}
           >
-            <Text className="text-primary-foreground font-semibold text-base">
-              Sign In
+            {isLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className="text-primary-foreground font-semibold text-base">
+                Sign In
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="border border-primary rounded-lg py-4 items-center"
+            onPress={handleSignUp}
+            disabled={isLoading}
+            activeOpacity={0.8}
+          >
+            <Text className="text-primary font-semibold text-base">
+              Create Account
             </Text>
           </TouchableOpacity>
         </View>
-
-        <Text className="text-center text-muted-foreground text-xs mt-8">
-          Enter any credentials to continue
-        </Text>
       </View>
     </KeyboardAvoidingView>
   );
+}
+
+export default function LoginScreen() {
+  return <LoginForm />;
 }
