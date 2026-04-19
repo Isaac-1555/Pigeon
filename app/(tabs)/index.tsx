@@ -7,8 +7,8 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
-  SafeAreaView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/context/app-context";
 import { sendStepUpdate } from "@/lib/email";
 import { Mail, UserPlus, ChevronDown, X, User } from "lucide-react-native";

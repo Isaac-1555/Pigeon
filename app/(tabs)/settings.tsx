@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  SafeAreaView,
   Modal,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/context/app-context";
 import { replaceTemplateVariables } from "@/lib/email";
 import {
