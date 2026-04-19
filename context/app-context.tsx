@@ -4,6 +4,8 @@ import {
   loadEmailTemplates,
   saveBusinessName,
   loadBusinessName,
+  saveCustomers,
+  loadCustomers,
   StoredEmailTemplate,
 } from "@/lib/storage";
 
@@ -130,9 +132,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Load persisted data on mount
   useEffect(() => {
     (async () => {
-      const [savedTemplates, savedName] = await Promise.all([
+      const [savedTemplates, savedName, savedCustomers] = await Promise.all([
         loadEmailTemplates(),
         loadBusinessName(),
+        loadCustomers(),
       ]);
       if (savedName) {
         setBusinessNameState(savedName);
@@ -140,9 +143,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedTemplates) {
         setEmailTemplates(savedTemplates);
       } else if (savedName) {
-        // First load with a business name but no saved templates:
-        // regenerate defaults with the saved business name
         setEmailTemplates(buildDefaultTemplates(savedName));
+      }
+      if (savedCustomers) {
+        setCustomers(savedCustomers);
       }
     })();
   }, []);
@@ -196,9 +200,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setCustomerStep = useCallback((customerId: string, stepId: string | null) => {
-    setCustomers((prev) =>
-      prev.map((c) => (c.id === customerId ? { ...c, currentStepId: stepId } : c))
-    );
+    setCustomers((prev) => {
+      const updated = prev.map((c) =>
+        c.id === customerId ? { ...c, currentStepId: stepId } : c
+      );
+      saveCustomers(updated);
+      return updated;
+    });
   }, []);
 
   const updateEmailTemplate = useCallback(

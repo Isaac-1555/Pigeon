@@ -3,7 +3,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const KEYS = {
   EMAIL_TEMPLATES: "@pigeon/email_templates",
   BUSINESS_NAME: "@pigeon/business_name",
+  CUSTOMERS: "@pigeon/customers",
 } as const;
+
+export interface StoredCustomer {
+  id: string;
+  name: string;
+  email: string;
+  currentStepId: string | null;
+}
 
 export interface StoredEmailTemplate {
   stepId: string;
@@ -51,6 +59,26 @@ export async function loadBusinessName(): Promise<string | null> {
     return await AsyncStorage.getItem(KEYS.BUSINESS_NAME);
   } catch (error) {
     console.error("Failed to load business name:", error);
+    return null;
+  }
+}
+
+// --- Customers ---
+
+export async function saveCustomers(customers: StoredCustomer[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(KEYS.CUSTOMERS, JSON.stringify(customers));
+  } catch (error) {
+    console.error("Failed to save customers:", error);
+  }
+}
+
+export async function loadCustomers(): Promise<StoredCustomer[] | null> {
+  try {
+    const raw = await AsyncStorage.getItem(KEYS.CUSTOMERS);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.error("Failed to load customers:", error);
     return null;
   }
 }

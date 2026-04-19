@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
+    "clear": "watchman watch-del-all 2>/dev/null; rm -rf $TMPDIR/haste-map-* 2>/dev/null; rm -rf $TMPDIR/metro-cache 2>/dev/null; echo 'Caches cleared'",
+    "prestart": "npm run clear &&",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
